@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
@@ -312,6 +313,9 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 			path = path.substring(1);
 		}
 		Set<Resource> result = doFindAllClassPathResources(path);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Resolved classpath location [" + location + "] to resources " + result);
+		}
 		return result.toArray(new Resource[result.size()]);
 	}
 
@@ -549,7 +553,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		JarFile jarFile;
 		String jarFileUrl;
 		String rootEntryPath;
-		boolean newJarFile = false;
+		boolean closeJarFile;
 
 		if (con instanceof JarURLConnection) {
 			// Should usually be the case for traditional JAR files.
@@ -559,6 +563,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 			jarFileUrl = jarCon.getJarFileURL().toExternalForm();
 			JarEntry jarEntry = jarCon.getJarEntry();
 			rootEntryPath = (jarEntry != null ? jarEntry.getName() : "");
+			closeJarFile = !jarCon.getUseCaches();
 		}
 		else {
 			// No JarURLConnection -> need to resort to URL file parsing.
@@ -578,7 +583,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 					jarFileUrl = urlFile;
 					rootEntryPath = "";
 				}
-				newJarFile = true;
+				closeJarFile = true;
 			}
 			catch (ZipException ex) {
 				if (logger.isDebugEnabled()) {
@@ -611,9 +616,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 			return result;
 		}
 		finally {
-			// Close jar file, but only if freshly obtained -
-			// not from JarURLConnection, which might cache the file reference.
-			if (newJarFile) {
+			if (closeJarFile) {
 				jarFile.close();
 			}
 		}
@@ -748,6 +751,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 			}
 			return;
 		}
+		Arrays.sort(dirContents);
 		for (File content : dirContents) {
 			String currPath = StringUtils.replace(content.getAbsolutePath(), File.separator, "/");
 			if (content.isDirectory() && getPathMatcher().matchStart(fullPattern, currPath + "/")) {

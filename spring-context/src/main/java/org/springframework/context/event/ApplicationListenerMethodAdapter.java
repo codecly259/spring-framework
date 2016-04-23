@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
@@ -83,12 +84,21 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 
 
 	public ApplicationListenerMethodAdapter(String beanName, Class<?> targetClass, Method method) {
+		validateMethod(method);
 		this.beanName = beanName;
 		this.method = method;
 		this.targetClass = targetClass;
 		this.bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
 		this.declaredEventTypes = resolveDeclaredEventTypes();
 		this.methodKey = new AnnotatedElementKey(this.method, this.targetClass);
+	}
+
+	private static void validateMethod(Method method) {
+		if (method.getReturnType() != void.class &&
+				AnnotationUtils.findAnnotation(method, Async.class) != null) {
+			throw new IllegalStateException(
+					"Asynchronous @EventListener method is not allowed to return reply events: " + method);
+		}
 	}
 
 
@@ -214,7 +224,7 @@ public class ApplicationListenerMethodAdapter implements GenericApplicationListe
 	}
 
 	protected <A extends Annotation> A getMethodAnnotation(Class<A> annotationType) {
-		return AnnotationUtils.findAnnotation(this.method, annotationType);
+		return AnnotatedElementUtils.findMergedAnnotation(this.method, annotationType);
 	}
 
 	/**

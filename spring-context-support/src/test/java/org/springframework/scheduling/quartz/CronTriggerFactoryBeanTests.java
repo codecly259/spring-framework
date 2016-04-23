@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,28 @@
  * limitations under the License.
  */
 
-package org.springframework.tests;
+package org.springframework.scheduling.quartz;
+
+import java.text.ParseException;
 
 import org.junit.Test;
+import org.quartz.CronTrigger;
 
-import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 
 /**
- * Tests for {@link JavaVersion}.
- *
- * @author Phillip Webb
+ * @author Stephane Nicoll
  */
-public class JavaVersionTests {
+public class CronTriggerFactoryBeanTests {
 
 	@Test
-	public void runningVersion() {
-		assertNotNull(JavaVersion.runningVersion());
-		assertThat(System.getProperty("java.version"), startsWith(JavaVersion.runningVersion().toString()));
-	}
-
-	@Test
-	public void isAtLeast() throws Exception {
-		assertTrue(JavaVersion.JAVA_16.isAtLeast(JavaVersion.JAVA_16));
-		assertFalse(JavaVersion.JAVA_16.isAtLeast(JavaVersion.JAVA_17));
+	public void createWithoutJobDetail() throws ParseException {
+		CronTriggerFactoryBean factory = new CronTriggerFactoryBean();
+		factory.setName("myTrigger");
+		factory.setCronExpression("0 15 10 ? * *");
+		factory.afterPropertiesSet();
+		CronTrigger trigger = factory.getObject();
+		assertEquals("0 15 10 ? * *", trigger.getCronExpression());
 	}
 
 }
